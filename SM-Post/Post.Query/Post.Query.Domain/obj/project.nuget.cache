@@ -1,8 +1,16 @@
 {
   "version": 2,
-  "dgSpecHash": "QSiZRIRDkso=",
+  "dgSpecHash": "lXbGs4US1UI=",
   "success": true,
   "projectFilePath": "/Users/sergeirudz/Documents/GitHub/learn-dotnet-kafka/SM-Post/Post.Query/Post.Query.Domain/Post.Query.Domain.csproj",
-  "expectedPackageFiles": [],
+  "expectedPackageFiles": [
+    "/Users/sergeirudz/.nuget/packages/dnsclient/1.6.1/dnsclient.1.6.1.nupkg.sha512",
+    "/Users/sergeirudz/.nuget/packages/microsoft.extensions.logging.abstractions/2.0.0/microsoft.extensions.logging.abstractions.2.0.0.nupkg.sha512",
+    "/Users/sergeirudz/.nuget/packages/mongodb.bson/3.10.0/mongodb.bson.3.10.0.nupkg.sha512",
+    "/Users/sergeirudz/.nuget/packages/mongodb.driver/3.10.0/mongodb.driver.3.10.0.nupkg.sha512",
+    "/Users/sergeirudz/.nuget/packages/sharpcompress/0.48.1/sharpcompress.0.48.1.nupkg.sha512",
+    "/Users/sergeirudz/.nuget/packages/snappier/1.3.1/snappier.1.3.1.nupkg.sha512",
+    "/Users/sergeirudz/.nuget/packages/zstdsharp.port/0.7.3/zstdsharp.port.0.7.3.nupkg.sha512"
+  ],
   "logs": []
 }
