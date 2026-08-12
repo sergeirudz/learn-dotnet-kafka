@@ -1,6 +1,8 @@
 */**/obj
 */**/bin
 
+# Copilot
+.github/project.md
 
 # Misc
 _NOTES.md
