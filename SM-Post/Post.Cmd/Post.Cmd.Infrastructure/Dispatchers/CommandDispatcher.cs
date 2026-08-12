@@ -32,5 +32,6 @@ public class CommandDispatcher: ICommandDispatcher
         {
             throw new ArgumentNullException(nameof(handler), "No command handler was registered!");
         }
+        
     }
 }
