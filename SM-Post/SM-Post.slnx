@@ -10,4 +10,5 @@
     <Project Path="Post.Query/Post.Query.Infrastructure/Post.Query.Infrastructure.csproj" />
   </Folder>
   <Project Path="../CQRS-ES/CQRS.Core/CQRS.Core.csproj" />
+  <Project Path="Post.Common/Post.Common.csproj" />
 </Solution>
