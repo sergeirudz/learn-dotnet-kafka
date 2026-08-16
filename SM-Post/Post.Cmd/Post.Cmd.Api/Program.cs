@@ -1,3 +1,4 @@
+using Confluent.Kafka;
 using CQRS.Core.Domain;
 using CQRS.Core.Handlers;
 using CQRS.Core.infrastructure;
@@ -16,6 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 // Order is important
 builder.Services.Configure<MongoDbConfig>(builder.Configuration.GetSection(nameof(MongoDbConfig)));
+builder.Services.Configure<ProducerConfig>(builder.Configuration.GetSection(nameof(ProducerConfig)));
 builder.Services.AddScoped<IEventStoreRepository, EventStoreRepository>(); // Depends on MongoDB
 builder.Services.AddScoped<IEventStore, EventStore>(); // Depends on IEventStoreRepository
 builder.Services.AddScoped<IEventSourcingHandler<PostAggregate>, EventSourcingHandler>(); // Depends on IEventStore
