@@ -2,23 +2,19 @@ using CQRS.Core.Domain;
 using CQRS.Core.Events;
 using CQRS.Core.Exceptions;
 using CQRS.Core.infrastructure;
+using CQRS.Core.Producers;
 using Post.Cmd.Domain.Aggregates;
 
 namespace Post.Cmd.Infrastructure.Stores;
 
-public class EventStore : IEventStore
+public class EventStore(IEventStoreRepository eventStoreRepository, IEventProducer eventProducer)
+    : IEventStore
 {
-    
-    private readonly IEventStoreRepository _eventStoreRepository;
-    
-    public EventStore(IEventStoreRepository eventStoreRepository)
-    {
-        _eventStoreRepository = eventStoreRepository;
-    }
-    
+    private readonly IEventProducer _eventProducer = eventProducer;
+
     public async Task<List<BaseEvent>> GetEventsAsync(Guid aggregateId)
     {
-        var eventStream = await _eventStoreRepository.FindByAggregateId(aggregateId);
+        var eventStream = await eventStoreRepository.FindByAggregateId(aggregateId);
 
         if (eventStream == null || !eventStream.Any())
         {
@@ -30,7 +26,7 @@ public class EventStore : IEventStore
     
     public async Task SaveEventAsync(Guid aggregateId, IEnumerable<BaseEvent> events, int expectedVersion)
     {
-        var eventStream = await _eventStoreRepository.FindByAggregateId(aggregateId);
+        var eventStream = await eventStoreRepository.FindByAggregateId(aggregateId);
 
         // Optimistic concurrency check. If 2 mutations happen for the same post.
         if (expectedVersion != -1 && eventStream[^1].Version != expectedVersion)
@@ -55,7 +51,10 @@ public class EventStore : IEventStore
                 EventData = @event
             };
 
-            await _eventStoreRepository.SaveAsync(eventModel);
+            await eventStoreRepository.SaveAsync(eventModel);
+
+            var topic = Environment.GetEnvironmentVariable("KAFKA_TOPIC"); // Get topic name from launchSettings
+            await _eventProducer.ProduceAsync(topic, @event);
         }
     }
 

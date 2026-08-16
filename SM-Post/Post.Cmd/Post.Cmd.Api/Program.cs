@@ -2,11 +2,13 @@ using Confluent.Kafka;
 using CQRS.Core.Domain;
 using CQRS.Core.Handlers;
 using CQRS.Core.infrastructure;
+using CQRS.Core.Producers;
 using Post.Cmd.Api.Commands;
 using Post.Cmd.Domain.Aggregates;
 using Post.Cmd.Infrastructure.Config;
 using Post.Cmd.Infrastructure.Dispatchers;
 using Post.Cmd.Infrastructure.Handlers;
+using Post.Cmd.Infrastructure.Producers;
 using Post.Cmd.Infrastructure.Repositories;
 using Post.Cmd.Infrastructure.Stores;
 
@@ -19,6 +21,7 @@ builder.Services.AddOpenApi();
 builder.Services.Configure<MongoDbConfig>(builder.Configuration.GetSection(nameof(MongoDbConfig)));
 builder.Services.Configure<ProducerConfig>(builder.Configuration.GetSection(nameof(ProducerConfig)));
 builder.Services.AddScoped<IEventStoreRepository, EventStoreRepository>(); // Depends on MongoDB
+builder.Services.AddScoped<IEventProducer, EventProducer>(); // Register Kafka producer
 builder.Services.AddScoped<IEventStore, EventStore>(); // Depends on IEventStoreRepository
 builder.Services.AddScoped<IEventSourcingHandler<PostAggregate>, EventSourcingHandler>(); // Depends on IEventStore
 builder.Services.AddScoped<ICommandHandler, CommandHandler>(); // Depends on IEventSourcingHandler
