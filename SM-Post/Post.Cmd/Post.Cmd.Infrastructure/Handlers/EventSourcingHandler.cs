@@ -11,8 +11,9 @@ public class EventSourcingHandler : IEventSourcingHandler<PostAggregate>
     private readonly IEventStore _eventStore;
 
 
-    public EventSourcingHandler()
+    public EventSourcingHandler(IEventStore eventStore)
     {
+        _eventStore = eventStore;
     }
 
     public async Task<PostAggregate> GetByIdAsync(Guid id)
