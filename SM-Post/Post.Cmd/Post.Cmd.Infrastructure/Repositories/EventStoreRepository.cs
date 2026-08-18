@@ -12,17 +12,24 @@ public class EventStoreRepository : IEventStoreRepository
 
     public EventStoreRepository(IOptions<MongoDbConfig> config)
     {
-         var mongoClient = new MongoClient(config.Value.ConnectionString);
-         var mongoDatabase = mongoClient.GetDatabase(config.Value.Database);
-         
-         _eventStoreCollection = mongoDatabase.GetCollection<EventModel>(config.Value.Collection);
+        var mongoClient = new MongoClient(config.Value.ConnectionString);
+        var mongoDatabase = mongoClient.GetDatabase(config.Value.Database);
+
+        _eventStoreCollection = mongoDatabase.GetCollection<EventModel>(config.Value.Collection);
     }
-    
+
     public async Task<List<EventModel>> FindByAggregateId(Guid aggregateId)
     {
-        return await _eventStoreCollection.Find(x => x.AggregateIdentifier == aggregateId).ToListAsync().ConfigureAwait(false);
+        return await _eventStoreCollection.Find(x => x.AggregateIdentifier == aggregateId).ToListAsync()
+            .ConfigureAwait(false);
     }
-    
+
+    public async Task<List<EventModel>> FindAllAsync()
+    {
+        // _=>true discard operator means find all
+        return await _eventStoreCollection.Find(_ => true).ToListAsync().ConfigureAwait(false);
+    }
+
     public async Task SaveAsync(EventModel @event)
     {
         await _eventStoreCollection.InsertOneAsync(@event).ConfigureAwait(false);
