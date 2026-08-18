@@ -14,7 +14,6 @@ public class QueryDispatcher : IQueryDispatcher<PostEntity>
         // Check if handler contains specified query handler type
         if (_handlers.ContainsKey(typeof(TQuery)))
         {
-            // what is query handler
             throw new IndexOutOfRangeException("You cant register the same query handler twice");
         }
 
