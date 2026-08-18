@@ -82,4 +82,72 @@ public class PostLookupController : ControllerBase
             });
         }
     }
+
+    [HttpGet("byAuthor/{author}")]
+    public async Task<ActionResult> GetPostsByAuthorAsync(string author)
+    {
+        try
+        {
+            var posts = await _queryDispatcher.SendAsync(new FindPostsByAuthorQuery { Author = author });
+            return NormalResponse(posts);
+        }
+        catch (Exception ex)
+        {
+            const string SAFE_ERROR_MESSAGE = "Error while processing request to find posts by author!";
+            return ErrorResponse(ex, SAFE_ERROR_MESSAGE);
+        }
+    }
+
+    [HttpGet("withComments")]
+    public async Task<ActionResult> GetPostsWithCommentsAsync()
+    {
+        try
+        {
+            var posts = await _queryDispatcher.SendAsync(new FindPostsWithCommentsQuery());
+            return NormalResponse(posts);
+        }
+        catch (Exception ex)
+        {
+            const string SAFE_ERROR_MESSAGE = "Error while processing request to find posts with comments!";
+            return ErrorResponse(ex, SAFE_ERROR_MESSAGE);
+        }
+    }
+
+    [HttpGet("withLikes/{numberOfLikes}")]
+    public async Task<ActionResult> GetPostsWithLikesAsync(int numberOfLikes)
+    {
+        try
+        {
+            var posts = await _queryDispatcher.SendAsync(new FindPostsWithLikesQuery { NumberOfLikes = numberOfLikes });
+            return NormalResponse(posts);
+        }
+        catch (Exception ex)
+        {
+            const string SAFE_ERROR_MESSAGE = "Error while processing request to find posts with likes!";
+            return ErrorResponse(ex, SAFE_ERROR_MESSAGE);
+        }
+    }
+
+    private ActionResult NormalResponse(List<PostEntity> posts)
+    {
+        if (posts == null || !posts.Any())
+            return NoContent();
+
+        var count = posts.Count;
+        return Ok(new PostLookupResponse
+        {
+            Posts = posts,
+            Message = $"Successfully returned {count} post{(count > 1 ? "s" : string.Empty)}!"
+        });
+    }
+
+    private ActionResult ErrorResponse(Exception ex, string safeErrorMessage)
+    {
+        _logger.LogError(ex, safeErrorMessage);
+
+        return StatusCode(StatusCodes.Status500InternalServerError, new BaseResponse
+        {
+            Message = safeErrorMessage
+        });
+    }
 }
