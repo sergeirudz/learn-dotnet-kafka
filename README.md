@@ -1,4 +1,50 @@
-## Commands
+## Architecture Flow (CQRS + Event Sourcing)
+
+![CQRS Architecture Diagram](diagram.png)
+
+### Data Storage Summary
+
+| Component                | Database | What's Stored                                      | Why |
+|--------------------------|----------|----------------------------------------------------|-----|
+| **EventStore**           | MongoDB  | `EventModel` documents (all past events as BSON)   | **Schema-less** = events with different fields (e.g. `Author` vs `Likes`) don't need migrations. Append-only = no updates, perfect for event sourcing |
+| **EventProducer**        | Kafka    | Serialized events (transient, for consumers)        | **Message broker** decouples write & read services. If Query API is down, Kafka retains messages until it's back |
+| **PostRepository** (cmd) | MongoDB  | EventModels via `IEventStoreRepository`             | Same as EventStore — just the repository layer on top of the same MongoDB collection |
+| **PostRepository** (query)| MSSQL   | `PostEntity`, `CommentEntity` (read-optimized)     | **Relational** = easy to query, join Posts ↔ Comments, run aggregations. This is the read model — deliberately different from write model (CQRS) |
+
+### Write Flow (Post.Cmd.Api)
+
+| # | Step | What Happens | Why |
+|---|------|--------------|-----|
+| 1 | **Controller** receives HTTP request → creates command (e.g. `NewPostCommand`) | Entry point — maps HTTP to a command object with all input data |
+| 2 | **CommandDispatcher** looks up handler in `Dictionary<Type, Func>` → routes to `CommandHandler` | Acts as a mediator so controllers don't depend on handlers directly |
+| 3 | **CommandHandler** calls `EventSourcingHandler.SaveAsync(aggregate)` | Orchestrator — coordinates loading, validating, and saving. Doesn't know DB details |
+| 4 | **EventSourcingHandler** loads past events from MongoDB → `ReplayEvents()` restores aggregate state | Loads aggregate to current state by replaying all prior events (rebuilds `_author`, `_active`, `_comments`) |
+| 5 | **AggregateRoot** validates business rules → `RaiseEvent()` → `Apply()` mutates local state + tracks `_changes` | Pure domain logic (no I/O). Validates (e.g. "is post active?", "is user the author?"). `RaiseEvent` calls `Apply` to mutate state + stores event in `_changes` list |
+| 6 | **EventStore** wraps each event in `EventModel` → saves to **MongoDB** + publishes to **Kafka** | **Dual-write**: MongoDB for permanent record (event sourcing), Kafka for broadcasting to read side |
+| 7 | **EventProducer** serializes event to JSON → produces to Kafka topic | Uses Confluent.Kafka. Serializes with `@event.GetType()` so type info is preserved for the consumer |
+
+### Read Flow (Post.Query.Api)
+
+| # | Step | What Happens | Why |
+|---|------|--------------|-----|
+| 8 | **ConsumerHostedService** (background) polls Kafka continuously | `BackgroundService` — runs as long as the app is alive, keeping the read DB in sync |
+| 9 | **EventConsumer** deserializes JSON → `EventJsonConverter` picks concrete event class via `Type` field | Can't deserialize abstract `BaseEvent`. Converter reads the `Type` field from JSON and picks the right concrete class (e.g. `PostCreatedEvent`) |
+| 10 | Reflection finds `EventHandler.On(ConcreteEvent)` and invokes it | No switch/if-chain needed. Just by convention: method name `On` + event type = dispatch target |
+| 11 | **EventHandler** creates/updates `PostEntity` or `CommentEntity` via Repository | Transforms event data into the read-optimized entity model (flat tables, no event-sourcing complexity) |
+| 12 | **PostRepository** / **CommentRepository** saves to **MSSQL** via EF Core | Write-optimized DB (MongoDB) and read-optimized DB (MSSQL) are **separate** — CQRS pattern in action |
+
+### Project Structure
+
+| Project | What It Does | Why Separate? |
+|---------|--------------|---------------|
+| **Post.Cmd.Api** | ASP.NET Web API. Controllers receive HTTP requests, create commands, dispatch them | **Entry point** for write operations. Thin layer — just HTTP mapping and DI setup |
+| **Post.Cmd.Domain** | The `PostAggregate` — validates business rules, raises events via `RaiseEvent()` + `Apply()` | **Pure domain logic** with zero I/O dependencies. No database, no Kafka — just rules. Testable in isolation |
+| **Post.Cmd.Infrastructure** | `EventStore`, `EventProducer`, `EventStoreRepository`, `EventSourcingHandler`, `CommandDispatcher` | **All I/O lives here** — MongoDB, Kafka, dispatching. Domain doesn't know about any of this (Dependency Inversion) |
+| **Post.Query.Api** | ASP.NET Web API + `ConsumerHostedService`. Runs the Kafka consumer and hosts the read API | **Separate process** from write side. Can scale independently (e.g. 1 write instance, 3 read instances) |
+| **Post.Query.Domain** | `PostEntity`, `CommentEntity`, `IPostRepository`, `ICommentRepository` interfaces | **Read model entities** are flat POCOs (no event sourcing complexity). Interfaces keep domain clean from EF Core |
+| **Post.Query.Infrastructure** | `EventConsumer`, `EventHandler`, `PostRepository`, `DatabaseContext`, `EventJsonConverter` | **All query-side I/O** — Kafka consumption, MSSQL via EF Core, JSON deserialization |
+| **Post.Common** | Shared event classes: `PostCreatedEvent`, `PostLikedEvent`, `CommentAddedEvent`, etc. | **Shared contract** between write & read sides. Both projects need to know the same event types |
+| **CQRS.Core** | Abstract base: `AggregateRoot`, `BaseEvent`, `CommandDispatcher` interfaces, `EventModel` | **Reusable framework** — can be extracted into a NuGet package for other CQRS microservices |
 ```shell
 dotnet watch run --project Post.Cmd/Post.Cmd.Api --launch-profile http
 dotnet watch run --project Post.Query/Post.Query.Api --launch-profile http
