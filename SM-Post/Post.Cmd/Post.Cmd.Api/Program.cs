@@ -1,8 +1,10 @@
 using Confluent.Kafka;
 using CQRS.Core.Domain;
+using CQRS.Core.Events;
 using CQRS.Core.Handlers;
 using CQRS.Core.infrastructure;
 using CQRS.Core.Producers;
+using MongoDB.Bson.Serialization;
 using Post.Cmd.Api.Commands;
 using Post.Cmd.Domain.Aggregates;
 using Post.Cmd.Infrastructure.Config;
@@ -11,8 +13,21 @@ using Post.Cmd.Infrastructure.Handlers;
 using Post.Cmd.Infrastructure.Producers;
 using Post.Cmd.Infrastructure.Repositories;
 using Post.Cmd.Infrastructure.Stores;
+using Post.Common.Events;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// MongoDB BSON is schemaless, flat binary. No inheritance like in .NET.
+// EventData is seen as BaseEvent. It will serialize and create EventData with all keys.
+// Otherwise, all events will be treated as BaseEvent
+BsonClassMap.RegisterClassMap<BaseEvent>();
+BsonClassMap.RegisterClassMap<PostCreatedEvent>();
+BsonClassMap.RegisterClassMap<MessageUpdatedEvent>();
+BsonClassMap.RegisterClassMap<PostLikedEvent>();
+BsonClassMap.RegisterClassMap<CommentAddedEvent>();
+BsonClassMap.RegisterClassMap<CommentUpdatedEvent>();
+BsonClassMap.RegisterClassMap<CommentRemovedEvent>();
+BsonClassMap.RegisterClassMap<PostRemovedEvent>();
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
